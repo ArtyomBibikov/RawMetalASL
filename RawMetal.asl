@@ -44,6 +44,7 @@ init
 
 		return true;
 	});
+	current.Scene = "";
 }
 
 update
