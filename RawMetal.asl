@@ -2,8 +2,7 @@ state("Raw Metal") {}
 
 startup
 {
-
-    Assembly.Load(File.ReadAllBytes("Components/asl-help")).CreateInstance("Unity");
+	Assembly.Load(File.ReadAllBytes("Components/asl-help")).CreateInstance("Unity");
 	vars.Helper.GameName = "Raw Metal";
 	vars.Helper.LoadSceneManager = true;
 	
@@ -22,38 +21,29 @@ startup
 			settings.Add("L3F3", true, "L3F3", "ANYAL");
 			settings.Add("L3FB", true, "L3FB", "ANYAL");
 			settings.Add("L4F1", true, "L4F1", "ANYAL");
-	
-	if (timer.CurrentTimingMethod == TimingMethod.RealTime)
-    {
-        var timingMessage = MessageBox.Show (
-            "This game uses Time without Loads (Game Time) as the main timing method.\n"+
-            "LiveSplit is currently set to show Real Time (RTA).\n"+
-            "Would you like to set the timing method to Game Time?",
-            "LiveSplit | Raw Metal",
-            MessageBoxButtons.YesNo, MessageBoxIcon.Question
-        );
 
-        if (timingMessage == DialogResult.Yes)
-        {
-            timer.CurrentTimingMethod = TimingMethod.GameTime;
-        }
-    }
+	vars.Splits = new HashSet<string>();
+	
+	vars.Helper.AlertLoadless();
+}
+
+onStart
+{
+	vars.Splits.Clear();
 }
 
 init
 {
-	vars.Splits = new HashSet<string>();
 	vars.Helper.TryLoad = (Func<dynamic, bool>)(mono =>
-    {
+	{
 		vars.Helper["loading"] = mono.Make<bool>("LevelLoader", "instance", "IsLoading");
 		vars.Helper["paused"] = mono.Make<bool>("GameManager", "instance", "paused");
 		vars.Helper["ascending"] = mono.Make<bool>("LevelLoader", "instance", "IsAscending");
 		vars.Helper["elepunch"] = mono.Make<bool>("GameManager", "instance", "player", "mitrikTimer", "stopped");
 		vars.Helper["loadlvl"] = mono.MakeString("LevelLoader", "instance", "LoadingLevel");
-		
+
 		return true;
-    });
-	current.Scene = "";
+	});
 }
 
 update
@@ -63,31 +53,26 @@ update
 
 split
 {
-	if(old.loadlvl != current.loadlvl && current.ascending == false)
+	if (old.loadlvl != current.loadlvl && !current.ascending)
 	{
-		return vars.Splits.Add(old.loadlvl) && settings[old.loadlvl];
+		return settings[old.loadlvl] && vars.Splits.Add(old.loadlvl);
 	}
-	else return current.elepunch != old.elepunch || current.Scene == "Escape Success Screen" && old.Scene != current.Scene;
+
+	return old.elepunch != current.elepunch
+		|| old.Scene != current.Scene && current.Scene == "Escape Success Screen";
 }
 
-start {    
-	return current.Scene == "Elevator";
+start
+{    
+	return old.Scene != current.Scene && current.Scene == "Elevator";
 }
 
-reset {
-	return current.Scene == "Title Screen";
-}
-
-isLoading {
-	return current.loading == true || current.paused == true;
-}
-
-exit
+reset
 {
-    vars.Unity.Reset();
+	return old.Scene != current.Scene && current.Scene == "Title Screen";
 }
 
-shutdown
+isLoading
 {
-    vars.Unity.Reset();
+	return current.loading || current.paused;
 }
